@@ -378,8 +378,8 @@ class Individual():
         gamma = 0.000666
         gvs = 1/((r_i*100.0)/41.4) #to convert from s/m to m^2 s/mol, divide s/m resistance by the molar volume of air, 41.4 mol m^-3, Campbell and Norman 2010, pg 80
         gva = 1/(((r_b*0.93)*100)/41.4) #rb for water is 0.93 of boundary layer
-        gHa = r_b
-        gamma_naut = gamma*((radiative_conductance + gHa)/((gvs*gva)/(gvs+gva)))
+        gHa = 1/((r_b*100)/41.4)
+        gamma_naut = gamma * (1 / gvs + 1 / gva) / (1 / gHa + 1 / radiative_conductance)
         s = ((((17.502*240.97))*0.611*exp((17.502*temp)/(temp+240.97)))/(240.97+temp)**2)/((101.3*exp(-elev/8200)))
         T_eh = temp+(gamma_naut/(gamma_naut+s))*(((Rabs - (self.E_S*(5.670373*10**-8)*((temp+273.15)**4)))/(29.3*(radiative_conductance+gHa)))-(vpd/(gamma_naut*(101.3*exp(-elev/8200)))))
         return T_eh
