@@ -13,9 +13,9 @@ import itertools
 
 #---------CONSTANTS----------#
 
-Rv = 461.5 #J*K^-1*kg^-1
-L = 2.5*10**6 #J per kg
-gravity = 9.8 #meters per second
+Rv = 461.5 #J K^-1 kg^-1
+L = 2.5*10**6 #J kg^-1
+gravity = 9.8 #m s^-1
 header = 'ncols        240\nnrows        231\nxllcorner    235489.9231464\nyllcorner    3803709.315658\ncellsize     890.16924311368\nNODATA_value -9999\n '
 
 #---------DATAFRAMES----------#
@@ -333,87 +333,90 @@ def run_sdm(temperatures_list,epoch_index,elevations,body_size_list,body_size_in
             
 class Individual():
     def __init__(self,MASS,r_i,THRESHOLD):
-        self.mass = MASS
-        self.diameter = 0.0016*log(self.mass) + 0.0061 #empirical formula for diameter from Riddell et al. 2017
-        self.activity_threshold = self.mass - (THRESHOLD*self.mass) #grams
-        self.mass_to_lose = self.mass - self.activity_threshold #grams
-        self.Rs = r_i[0] #sec/cm^1
-        self.rb = 0.0 #sec/cm^1
-        self.activity = 0.0 #hours
-        self.surface_area = 8.42*(self.mass**0.694) #cm^2
-        self.EWL = 0.0 #g sec^-1
-        self.T_eh = 0.0
+        self.mass = MASS #units: g
+        self.diameter = 0.0016*log(self.mass) + 0.0061 #units: m, empirical formula for diameter from Riddell et al. 2017
+        self.activity_threshold = self.mass - (THRESHOLD*self.mass) #units: g
+        self.mass_to_lose = self.mass - self.activity_threshold #units: g
+        self.Rs = r_i[0] #units: s cm^-1
+        self.rb = 0.0 #units: s cm^-1
+        self.activity = 0.0 #units: h
+        self.surface_area = 8.42*(self.mass**0.694) #units: cm^2
+        self.EWL = 0.0 #units: g s^-1
+        self.T_eh = 0.0 #units: C
         self.activity_grid = []
         self.activity_status = 0.0 #zero is active, one is inactive
-        self.elevm = 760.0
+        self.elevm = 760.0 #units: m
         self.energy_status = 0.0
         self.energy_grid = []
         self.acclimation_status = r_i[1]
         self.Teh_active = []
         self.Teh_inactive = []
         self.Teh_total = []
-        self.E_G = 0.97 #emmisitivity for soil
+        self.E_G = 1.0 #emmisitivity for soil assuming blackbody conditions
         self.E_S = 0.96 #emissivity of salamander
         self.A_L = 0.965 #absorptance of organism to longwave radiation
     
     def longwave_sky(self,temperature):
         'this function calculates longwave radiation from the skin based on Campbell and Norman 2010'
-        return 53.1*10**-14*(temperature+273.15)**6.
+        return 1.0*(5.670373*10**-8 * (temperature + 273.15)**4) #units: W m^-2
 
     def longwave_ground(self,temperature):
         'this function calculates longwave radiation from the ground based on Campbell and Norman 2010'
         b = 5.670373*10**-8
-        return self.E_G*b*(temperature+273.15)**4.
+        return self.E_G*b*(temperature+273.15)**4. #units: W m^-2
         
     def Rabs(self,temperature):
         'this function calculates the radiation absorbed from the sky and ground based on Campbell and Norman 2010'
-        return (0.5*(self.A_L*(self.longwave_sky(temperature)+self.longwave_ground(temperature))))
+        return (0.5*(self.A_L*(self.longwave_sky(temperature)+self.longwave_ground(temperature)))) #units: W m^-2
         
     def radiative_conductance(self,temperature):
         'this function calculates radiative conductance from Campbell and Norman 2010'
-        return (4.*(5.670373*10**-8)*(temperature+273.15)**3.)/29.3
+        return (4.*(5.670373*10**-8)*(temperature+273.15)**3.)/29.3 #units: mol m^-2 s^-1
     
     def calculate_Teh(self,r_i,r_b,diameter,temp,elev,vpd,Rabs,radiative_conductance):
         'this function calculates the humid operative temperature from Campbell and Norman 2010'
-        gamma = 0.000666
-        gvs = 1/((r_i*100.0)/41.4) #to convert from s/m to m^2 s/mol, divide s/m resistance by the molar volume of air, 41.4 mol m^-3, Campbell and Norman 2010, pg 80
-        gva = 1/(((r_b*0.93)*100)/41.4) #rb for water is 0.93 of boundary layer
-        gHa = 1/((r_b*100)/41.4)
-        gamma_naut = gamma * (1 / gvs + 1 / gva) / (1 / gHa + 1 / radiative_conductance)
-        s = ((((17.502*240.97))*0.611*exp((17.502*temp)/(temp+240.97)))/(240.97+temp)**2)/((101.3*exp(-elev/8200)))
-        T_eh = temp+(gamma_naut/(gamma_naut+s))*(((Rabs - (self.E_S*(5.670373*10**-8)*((temp+273.15)**4)))/(29.3*(radiative_conductance+gHa)))-(vpd/(gamma_naut*(101.3*exp(-elev/8200)))))
+        gamma = 0.000666 #units: C^-1
+        gvs = 1/((r_i*100.0)/41.4) #units: mol m^-2 s^-1
+        gva = 1/(((r_b*0.93)*100)/41.4) #units: mol m^-2 s^-1
+        gHa = 1/((r_b*100)/41.4) #units: mol m^-2 s^-1
+        gamma_naut = gamma * (1 / gvs + 1 / gva) / (1 / gHa + 1 / radiative_conductance) #units: C^-1
+        s = ((((17.502*240.97))*0.611*exp((17.502*temp)/(temp+240.97)))/(240.97+temp)**2)/((101.3*exp(-elev/8200))) #units: C^-1
+        T_eh = temp+(gamma_naut/(gamma_naut+s))*(((Rabs - (self.E_S*(5.670373*10**-8)*((temp+273.15)**4)))/(29.3*(radiative_conductance+gHa)))-(vpd/(gamma_naut*(101.3*exp(-elev/8200))))) #units: C
         return T_eh
         
     def calculate_ea(self,dewpoint):
         'this function calculates the actual vapor pressure'
-        ea = ((2.71828182845904**(((1.0/273.0)-(1.0/(dewpoint + 273.15)))*5422.9939))*0.611)
+        ea = ((2.71828182845904**(((1.0/273.0)-(1.0/(dewpoint + 273.15)))*5422.9939))*0.611) #units: kPa
         return ea
         
     def calculate_es(self,temp_K):
         'this function calculates saturation vapor pressure'
-        es = 0.611*exp((L/Rv)*((1./273.15)-(1./temp_K))) 
+        es = 0.611*exp((L/Rv)*((1./273.15)-(1./temp_K))) #units: kPa
         return es
         
     def calculate_soil(self,tmax,tmin,hour,depth):
         'this function calculates soil temperatures at the provided depth based on temperatures at the surface, from Campbell and Norman 2010'
-        return ((tmax+tmin)/2.0)+((tmax-tmin)/2.0)*(2.71**(-depth/17.0))*sin((3.14/12.)*(hour-8)-depth/17.0)
-    
+        return ((tmax+tmin)/2.0)+((tmax-tmin)/2.0)*(2.71**(-depth/17.0))*sin((3.14/12.)*(hour-8)-depth/17.0) #units: C
+        
     def update_rb(self,temp_K,e_s,e_a):
         'this function calculats the boundary layer resistance based upon calculations from Gates 1980 (Biophysical Ecology) and Monteith 2013 (Principles of Environmental Physics)'
-        air_pressure = (101325.*(1.-(2.2569*10**-5)*self.elevm)**5.2553)
-        air_density = air_pressure/(287.04*temp_K)
-        dynamic_viscosity = (1.8325*10**-5)*((296.16+120.)/(temp_K+120.))*((temp_K/296.16)**1.5)
-        kinematic_viscosity = dynamic_viscosity/air_density
-        T_surface = (temp_K)*(1.+0.38*((e_s*1000.)/air_pressure))
-        T_air = (temp_K)*(1.+0.38*((e_a*1000.)/air_pressure))
-        coef_thermal_expansion = 1.0/temp_K
-        Grashof = (coef_thermal_expansion*gravity*(self.diameter**3)*(abs(T_surface-T_air)))/(kinematic_viscosity**2)
-        Nusselt = 0.48*((Grashof)**0.25)
-        thermal_conductivity = (2.4525*10**-2)+((7.038*10**-5)*(temp_K-273.15))
-        hc = (Nusselt*thermal_conductivity)/self.diameter
-        mixing_ratio = (0.6257*(e_a*1000))/(air_pressure-(1.006*(e_a*1000)))
-        specific_heat = (1004.84+(1846.4*mixing_ratio))/(1+mixing_ratio)
-        self.rb = ((specific_heat*air_density)/hc)/100
+        air_pressure = (101325.*(1.-(2.2569*10**-5)*self.elevm)**5.2553) #units: Pa
+        air_density = air_pressure/(287.04*temp_K) #units: kg m^-3
+        dynamic_viscosity = (1.8325*10**-5)*((296.16+120.)/(temp_K+120.))*((temp_K/296.16)**1.5) #units: kg m^-1 s^-1
+        kinematic_viscosity = dynamic_viscosity/air_density #units: m^2 K^-1
+        T_surface = (temp_K)*(1.+0.38*((e_s*1000.)/air_pressure)) #units: K
+        T_air = (temp_K)*(1.+0.38*((e_a*1000.)/air_pressure)) #units: K
+        coef_thermal_expansion = 1.0/temp_K #units: K^-1
+        Grashof = (coef_thermal_expansion*gravity*(self.diameter**3)*(abs(T_surface-T_air)))/(kinematic_viscosity**2) #units: dimensionless
+        Nusselt_free = 0.48*((Grashof)**0.25) #units: dimensionless
+        Reynolds_forced = (0.1*self.diameter)/kinematic_viscosity #units: dimensionless
+        Nusselt_forced = 0.615*Reynolds_forced**0.466 #units: dimensionless
+        thermal_conductivity = (2.4525*10**-2)+((7.038*10**-5)*(temp_K-273.15)) #units: W m^-1 K^-1
+        Nusselt_combined = (Nusselt_free**3 + Nusselt_forced**3)**(1. / 3.) #units: dimensionless
+        hc_combined = (Nusselt_combined*thermal_conductivity)/self.diameter ##units: W m^-2 C^-1
+        mixing_ratio = (0.6257*(e_a*1000))/(air_pressure-(1.006*(e_a*1000))) #units: kg kg^-1
+        specific_heat = (1004.84+(1846.4*mixing_ratio))/(1+mixing_ratio) #units: J kg^-1 K^-1
+        self.rb = ((specific_heat * air_density)/hc_combined)/100  #units: s cm^-1
          
     def calculate_nightly_activity(self,temp,temp_current,dewpoint,elev,humidity_scenario,depth): #figure out what to do about year and climate scenario
         'calculates total activity time (seconds) and energy balance (in joules) for the average day of the month based on hourly temps, vpds, and soil temps'
@@ -430,41 +433,41 @@ class Individual():
                     if hour >= 20 or hour <= 5:
                         if temp[hour][row][column] > 5.0 and temp[hour][row][column] < 25.0:
                             if self.activity_status == 0.0: #0.0 means the salamander is active
-                                original_temp = temp[hour][row][column]
-                                temp_K_original = original_temp + 273.15
-                                e_a_current = float(self.calculate_ea(dewpoint))
-                                e_s_current = float(self.calculate_es(temp_current[hour][row][column] + 273.15))
+                                original_temp = temp[hour][row][column] #units: C
+                                temp_K_original = original_temp + 273.15 #units: K
+                                e_a_current = float(self.calculate_ea(dewpoint)) #units: kPa
+                                e_s_current = float(self.calculate_es(temp_current[hour][row][column] + 273.15)) #units: kPa
                                 rh_current = e_a_current/e_s_current
-                                e_s_original = float(self.calculate_es(temp_K_original))
-                                e_a_original = rh_current * e_s_original
-                                e_a_new = e_a_original + (e_a_original*humidity_scenario)
-                                vpd = (e_s_original-e_a_new)
-                                self.elevm = elev[row][column]
-                                self.update_rb(temp_K_original,e_s_original,e_a_new)
-                                self.T_eh = self.calculate_Teh(self.Rs,self.rb,self.diameter,original_temp,self.elevm,vpd,self.Rabs(original_temp),self.radiative_conductance(original_temp))
+                                e_s_original = float(self.calculate_es(temp_K_original)) #units: kPa
+                                e_a_original = rh_current * e_s_original #units: kPa
+                                e_a_new = e_a_original + (e_a_original*humidity_scenario) #units: kPa
+                                vpd = (e_s_original-e_a_new) #units: kPa
+                                self.elevm = elev[row][column] #units: m
+                                self.update_rb(temp_K_original,e_s_original,e_a_new) #units: s cm^-1
+                                self.T_eh = self.calculate_Teh(self.Rs,self.rb,self.diameter,original_temp,self.elevm,vpd,self.Rabs(original_temp),self.radiative_conductance(original_temp)) #units: C
                                 if self.acclimation_status == 0.0: #no thermal sensitivity of resistance to water loss
-                                    Rs = self.Rs
+                                    Rs = self.Rs #units: s cm^-1
                                 else: #thermal sensitivity of resistance to water loss
-                                    Rs = self.ri_acclimation(self.T_eh)
-                                rho = (e_s_original/(temp_K_original*Rv))-(e_a_new/(temp_K_original*Rv)) #calculate water vapor density gradient
-                                EWL = self.surface_area*(rho/(Rs+(self.rb*0.93))) #adjust boundary layer here for water vapor
-                                self.EWL = EWL
-                                hourly_loss = self.EWL*3600.0
+                                    Rs = self.ri_acclimation(self.T_eh) #units: s cm^-1
+                                rho = (e_s_original/(temp_K_original*Rv))-(e_a_new/(temp_K_original*Rv)) #units: g cm^-3
+                                EWL = self.surface_area*(rho/(Rs+(self.rb*0.93))) #units: g s^-1
+                                self.EWL = EWL #units: g s^-1
+                                hourly_loss = self.EWL*3600.0 #units: g s^-1
                                 if self.mass_to_lose > hourly_loss:
-                                    self.mass_to_lose -= hourly_loss
-                                    self.activity += 1.0
-                                    energy_intake = ((((0.00383582 + (-0.00252254)*self.T_eh + 0.00090893*self.T_eh**2 + (-2.52723e-5)*self.T_eh**3)*1000)*self.mass)/24.)
-                                    self.energy_status += energy_intake
-                                    self.mass_to_lose += (energy_intake/22000.0)*2.33
-                                    volume_oxygen = ((((10.0**((0.04618974*self.T_eh)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*1.5)*20.1)
-                                    self.energy_status -= volume_oxygen
+                                    self.mass_to_lose -= hourly_loss #units: g
+                                    self.activity += 1.0 #units: h
+                                    energy_intake = ((((0.00383582 + (-0.00252254)*self.T_eh + 0.00090893*self.T_eh**2 + (-2.52723e-5)*self.T_eh**3)*1000)*self.mass)/24.) #units: kJ h^-1
+                                    self.energy_status += energy_intake #units: kJ h^-1
+                                    self.mass_to_lose += (energy_intake/22000.0)*2.33 #units: g
+                                    volume_oxygen = ((((10.0**((0.04618974*self.T_eh)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*1.5)*20.1) #units: kJ h^-1
+                                    self.energy_status -= volume_oxygen #units: kJ h^-1
                                     self.Teh_active.append(self.T_eh)
                                     self.Teh_total.append(self.T_eh)
                                 else:
                                     self.activity += (self.mass_to_lose/hourly_loss)
-                                    energy_intake = ((((0.00383582 + (-0.00252254)*self.T_eh + 0.00090893*self.T_eh**2 + (-2.52723e-5)*self.T_eh**3)*1000)*self.mass)/24.)*(self.mass_to_lose/hourly_loss)
+                                    energy_intake = ((((0.00383582 + (-0.00252254)*self.T_eh + 0.00090893*self.T_eh**2 + (-2.52723e-5)*self.T_eh**3)*1000)*self.mass)/24.)*(self.mass_to_lose/hourly_loss) #units: kJ h^-1
                                     self.energy_status += energy_intake
-                                    volume_oxygen = ((((10.0**((0.04618974*self.T_eh)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*1.5)*20.1)*(self.mass_to_lose/hourly_loss)
+                                    volume_oxygen = ((((10.0**((0.04618974*self.T_eh)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*1.5)*20.1)*(self.mass_to_lose/hourly_loss) #units: kJ h^-1
                                     self.energy_status -= volume_oxygen
                                     self.mass_to_lose = 0.0
                                     self.activity_status += 1.0
@@ -481,7 +484,7 @@ class Individual():
                                 tmax = temp[14][row][column]
                                 tmin = temp[6][row][column]
                                 soil_T = self.calculate_soil(tmax,tmin,hour,depth)
-                                volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1)
+                                volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1) #units: kJ h^-1
                                 self.energy_status -= volume_oxygen
                                 self.Teh_inactive.append(soil_T)
                                 self.Teh_total.append(soil_T)
@@ -489,7 +492,7 @@ class Individual():
                             tmax = temp[14][row][column]
                             tmin = temp[6][row][column]
                             soil_T = self.calculate_soil(tmax,tmin,hour,depth)
-                            volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1)
+                            volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1) #units: kJ h^-1
                             self.energy_status -= volume_oxygen
                             self.Teh_inactive.append(soil_T)
                             self.Teh_total.append(soil_T)
@@ -506,7 +509,7 @@ class Individual():
                         if self.energy_status == -9999:
                             break
                         elif soil_T > 0.0:
-                            volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1)
+                            volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1) #units: kJ h^-1
                             self.energy_status -= volume_oxygen
                             self.Teh_inactive.append(soil_T)
                             self.Teh_total.append(soil_T)
@@ -570,13 +573,13 @@ captures = list(itertools.chain.from_iterable(read_coordinates('your_path_here')
 
 #run model for body sizes, skin resistances, epochs, and humidities
 list_of_acclimation_status = ['nac','yac']
-list_of_resistances = [[6.0,0],[6.0,1]] #[[3.0,0.0],[5.0,0.0],[7.0,0.0]]
-list_of_sizes = [2.0,3.0,4.0] #[2.0,3.0,4.0]
-list_of_epochs = ["CU","CC","HG"] #["CU","CC","HG"]
+list_of_resistances = [[6.0,0],[6.0,1]]
+list_of_sizes = [2.0,3.0,4.0]
+list_of_epochs = ["CU","CC","HG"]
 list_of_months = [1,2,3,4,5,6,7,8,9,10,11,12]
-list_of_thresholds = [0.035,0.07,0.1] # [0.035,0.07,0.1]
-list_of_humidities = [0.0,0.25,-0.25] #[0.0,0.25,-0.25]
-list_of_depths = [20] #[5.0,20.0]
+list_of_thresholds = [0.05,0.075,0.1]
+list_of_humidities = [0.0,0.25,-0.25]
+list_of_depths = [30]
 counter = 0.0
 total = len(list_of_resistances) * len(list_of_sizes) * len(list_of_epochs) * len(list_of_thresholds) * len(list_of_humidities) * len(list_of_depths)
 for epoch in range(len(temperatures)):
