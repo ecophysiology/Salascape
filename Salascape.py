@@ -456,18 +456,18 @@ class Individual():
                                 if self.mass_to_lose > hourly_loss:
                                     self.mass_to_lose -= hourly_loss #units: g
                                     self.activity += 1.0 #units: h
-                                    energy_intake = ((((0.00383582 + (-0.00252254)*self.T_eh + 0.00090893*self.T_eh**2 + (-2.52723e-5)*self.T_eh**3)*1000)*self.mass)/24.) #units: kJ h^-1
-                                    self.energy_status += energy_intake #units: kJ h^-1
+                                    energy_intake = ((((0.00383582 + (-0.00252254)*self.T_eh + 0.00090893*self.T_eh**2 + (-2.52723e-5)*self.T_eh**3)*1000)*self.mass)/24.) #units: J h^-1
+                                    self.energy_status += energy_intake #units: J h^-1
                                     self.mass_to_lose += (energy_intake/22000.0)*2.33 #units: g
-                                    volume_oxygen = ((((10.0**((0.04618974*self.T_eh)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*1.5)*20.1) #units: kJ h^-1
-                                    self.energy_status -= volume_oxygen #units: kJ h^-1
+                                    volume_oxygen = ((((10.0**((0.04618974*self.T_eh)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*1.5)*20.1) #units: J h^-1
+                                    self.energy_status -= volume_oxygen #units: J h^-1
                                     self.Teh_active.append(self.T_eh)
                                     self.Teh_total.append(self.T_eh)
                                 else:
                                     self.activity += (self.mass_to_lose/hourly_loss)
-                                    energy_intake = ((((0.00383582 + (-0.00252254)*self.T_eh + 0.00090893*self.T_eh**2 + (-2.52723e-5)*self.T_eh**3)*1000)*self.mass)/24.)*(self.mass_to_lose/hourly_loss) #units: kJ h^-1
+                                    energy_intake = ((((0.00383582 + (-0.00252254)*self.T_eh + 0.00090893*self.T_eh**2 + (-2.52723e-5)*self.T_eh**3)*1000)*self.mass)/24.)*(self.mass_to_lose/hourly_loss) #units: J h^-1
                                     self.energy_status += energy_intake
-                                    volume_oxygen = ((((10.0**((0.04618974*self.T_eh)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*1.5)*20.1)*(self.mass_to_lose/hourly_loss) #units: kJ h^-1
+                                    volume_oxygen = ((((10.0**((0.04618974*self.T_eh)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*1.5)*20.1)*(self.mass_to_lose/hourly_loss) #units: J h^-1
                                     self.energy_status -= volume_oxygen
                                     self.mass_to_lose = 0.0
                                     self.activity_status += 1.0
@@ -484,7 +484,7 @@ class Individual():
                                 tmax = temp[14][row][column]
                                 tmin = temp[6][row][column]
                                 soil_T = self.calculate_soil(tmax,tmin,hour,depth)
-                                volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1) #units: kJ h^-1
+                                volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1) #units: J h^-1
                                 self.energy_status -= volume_oxygen
                                 self.Teh_inactive.append(soil_T)
                                 self.Teh_total.append(soil_T)
@@ -492,7 +492,7 @@ class Individual():
                             tmax = temp[14][row][column]
                             tmin = temp[6][row][column]
                             soil_T = self.calculate_soil(tmax,tmin,hour,depth)
-                            volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1) #units: kJ h^-1
+                            volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1) #units: J h^-1
                             self.energy_status -= volume_oxygen
                             self.Teh_inactive.append(soil_T)
                             self.Teh_total.append(soil_T)
@@ -509,7 +509,7 @@ class Individual():
                         if self.energy_status == -9999:
                             break
                         elif soil_T > 0.0:
-                            volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1) #units: kJ h^-1
+                            volume_oxygen = (((10.0**((0.04618974*soil_T)+0.59925591*log10(self.mass)+0.86009768))/1000.0)*20.1) #units: J h^-1
                             self.energy_status -= volume_oxygen
                             self.Teh_inactive.append(soil_T)
                             self.Teh_total.append(soil_T)
